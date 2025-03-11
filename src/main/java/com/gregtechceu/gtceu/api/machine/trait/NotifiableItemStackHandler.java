@@ -27,6 +27,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+
 /**
  * @author KilaBash
  * @date 2023/2/20
@@ -251,7 +254,22 @@ public class NotifiableItemStackHandler extends NotifiableRecipeHandlerTrait<Ing
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate, boolean notifyChange) {
         if (canCapOutput()) {
-            return storage.extractItem(slot, amount, simulate, notifyChange);
+            ItemStack stack = storage.extractItem(slot, amount, simulate, notifyChange);
+            if (!stack.isEmpty()) {
+
+                // Serialize ITEM_HANDLER capability into NBT and attach it to the ItemStack
+                stack.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
+                    CompoundTag handlerTag = new CompoundTag();
+                    for (int i = 0; i < handler.getSlots(); i++) {
+                        ItemStack slotStack = handler.getStackInSlot(i);
+                        handlerTag.put("Slot" + i, slotStack.save(new CompoundTag()));
+                    }
+                    stack.getOrCreateTag().put("ForgeCaps", handlerTag);
+                });
+
+            }
+            
+            return stack;
         }
         return ItemStack.EMPTY;
     }
